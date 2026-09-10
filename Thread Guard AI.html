@@ -1,0 +1,1049 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ThreatGuard AI</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<style>
+  :root{
+    --bg:#0A0E13; --panel:#11161E; --panel-2:#161C26; --border:#232B37; --border-soft:#1B222C;
+    --text:#E7ECF2; --muted:#8996A6; --muted-2:#5C6878; --accent:#F0A63C; --accent-contrast:#1A1200;
+    --critical:#E5484D; --high:#F2994A; --medium:#F0A63C; --low:#4CAF6D;
+    --shadow: rgba(0,0,0,.45); --overlay: rgba(5,7,10,.72);
+    --mono:'IBM Plex Mono',monospace; --sans:'IBM Plex Sans',sans-serif;
+    color-scheme: dark;
+  }
+  html[data-theme="light"]{
+    --bg:#EEF1F4; --panel:#FFFFFF; --panel-2:#F6F8FA; --border:#DCE2E8; --border-soft:#E8ECF0;
+    --text:#141A22; --muted:#57697A; --muted-2:#8496A6; --accent:#B9720F; --accent-contrast:#FFFFFF;
+    --critical:#C0393E; --high:#BD6B0C; --medium:#B9720F; --low:#28884F;
+    --shadow: rgba(30,38,48,.10); --overlay: rgba(120,130,140,.35);
+    color-scheme: light;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  html{-webkit-tap-highlight-color:transparent;}
+  body{
+    background:var(--bg); color:var(--text); font-family:var(--sans); min-height:100vh;
+    background-image:linear-gradient(var(--border-soft) 1px,transparent 1px),linear-gradient(90deg,var(--border-soft) 1px,transparent 1px);
+    background-size:34px 34px; background-position:-1px -1px;
+    transition:background-color .2s ease, color .2s ease;
+  }
+  ::selection{background:var(--accent);color:var(--accent-contrast);}
+  .shell{max-width:1180px;margin:0 auto;padding:28px 20px 80px;}
+  @media (prefers-reduced-motion: reduce){ *{animation-duration:.001ms !important; transition-duration:.001ms !important;} }
+
+  header{display:flex;align-items:center;justify-content:space-between;gap:16px;padding-bottom:22px;border-bottom:1px solid var(--border);margin-bottom:26px;flex-wrap:wrap;}
+  .brand{display:flex;align-items:center;gap:12px;}
+  .brand-mark{width:38px;height:38px;border:1.5px solid var(--accent);border-radius:9px;display:flex;align-items:center;justify-content:center;position:relative;flex-shrink:0;}
+  .brand-mark::before{content:"";width:14px;height:14px;border:1.5px solid var(--accent);border-radius:3px;transform:rotate(45deg);}
+  .brand-text h1{font-size:17px;letter-spacing:0.02em;font-weight:700;}
+  .brand-text p{font-size:12px;color:var(--muted);font-family:var(--mono);margin-top:2px;}
+  .header-right{display:flex; align-items:center; gap:10px; flex-wrap:wrap;}
+  .live-pill{display:flex;align-items:center;gap:6px;font-family:var(--mono);font-size:11px;color:var(--muted);border:1px solid var(--border);padding:6px 10px;border-radius:20px;}
+  .live-dot{width:7px;height:7px;border-radius:50%;background:var(--low); box-shadow:0 0 0 0 rgba(76,175,109,.6); animation:pulse 1.6s infinite;}
+  @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(76,175,109,.5);}70%{box-shadow:0 0 0 6px rgba(76,175,109,0);}100%{box-shadow:0 0 0 0 rgba(76,175,109,0);}}
+  .icon-btn{width:34px;height:34px;border-radius:9px;border:1px solid var(--border);background:var(--panel);color:var(--muted);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:color .15s,border-color .15s;flex-shrink:0;}
+  .icon-btn:hover{color:var(--accent);border-color:var(--accent);}
+  .icon-btn svg{width:16px;height:16px;}
+  nav.tabs{display:flex;gap:4px;background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:4px;}
+  nav.tabs button{font-family:var(--sans);font-size:13.5px;font-weight:600;color:var(--muted);background:transparent;border:none;padding:8px 16px;border-radius:7px;cursor:pointer;transition:background .15s,color .15s;position:relative;}
+  nav.tabs button.active{background:var(--accent);color:var(--accent-contrast);}
+  nav.tabs button:not(.active):hover{color:var(--text);}
+  .badge-count{position:absolute; top:-4px; right:2px; background:var(--critical); color:#fff; font-size:9px; font-family:var(--mono); border-radius:8px; padding:1px 5px; display:none;}
+
+  .view{display:none;} .view.active{display:block;}
+  .scan-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:start;}
+  @media (max-width:860px){.scan-grid{grid-template-columns:1fr;}}
+  .panel{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:22px;}
+  .panel-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;}
+  .panel-head h2{font-size:14px;font-weight:700;}
+  .panel-head .eyebrow{font-family:var(--mono);font-size:11px;color:var(--muted-2);}
+  .type-select{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;}
+  .type-select button{font-family:var(--mono);font-size:12px;padding:7px 12px;border-radius:7px;border:1px solid var(--border);background:var(--panel-2);color:var(--muted);cursor:pointer;transition:.15s;}
+  .type-select button.active{border-color:var(--accent);color:var(--accent);background:color-mix(in srgb, var(--accent) 10%, transparent);}
+  textarea{width:100%;min-height:230px;resize:vertical;background:var(--bg);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:var(--mono);font-size:13px;line-height:1.6;padding:14px;outline:none;}
+  textarea:focus{border-color:var(--accent);} textarea::placeholder{color:var(--muted-2);}
+  .sample-row{display:flex;gap:10px;margin-top:10px;flex-wrap:wrap;}
+  .sample-row button{font-size:11.5px;color:var(--muted);background:none;border:1px dashed var(--border);padding:5px 10px;border-radius:6px;cursor:pointer;font-family:var(--sans);}
+  .sample-row button:hover{color:var(--accent);border-color:var(--accent);}
+  .scan-btn{margin-top:16px;width:100%;padding:13px;border-radius:10px;border:none;background:var(--accent);color:var(--accent-contrast);font-weight:700;font-size:14px;font-family:var(--sans);cursor:pointer;letter-spacing:0.01em;display:flex;align-items:center;justify-content:center;gap:9px;transition:filter .15s,transform .1s;}
+  .scan-btn:hover{filter:brightness(1.08);} .scan-btn:active{transform:scale(0.99);}
+  .api-note{font-size:11px; color:var(--muted-2); font-family:var(--mono); margin-top:10px;}
+  .ai-box{font-size:12.5px;line-height:1.6;color:var(--text);background:var(--panel-2);border:1px solid var(--border);border-left:3px solid var(--accent);border-radius:8px;padding:12px 14px;}
+  .ai-box.loading{color:var(--muted);font-family:var(--mono);font-size:12px;display:flex;align-items:center;gap:8px;}
+  .ai-box.muted{color:var(--muted-2);font-family:var(--mono);font-size:12px;}
+  .spinner{width:12px;height:12px;border-radius:50%;border:2px solid var(--border);border-top-color:var(--accent);animation:spin .7s linear infinite;flex-shrink:0;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+  .ai-tag{display:inline-flex;align-items:center;gap:5px;font-family:var(--mono);font-size:10px;color:var(--accent);letter-spacing:0.05em;text-transform:uppercase;margin-bottom:8px;}
+  .real-badge{font-family:var(--mono);font-size:10px;color:var(--low);border:1px solid var(--border);border-radius:5px;padding:2px 7px;margin-left:8px;white-space:nowrap;}
+  .demo-badge{font-family:var(--mono);font-size:10px;color:var(--muted-2);border:1px solid var(--border);border-radius:5px;padding:2px 7px;margin-left:8px;white-space:nowrap;}
+
+  .result-empty{height:100%;min-height:340px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;color:var(--muted-2);gap:10px;padding:40px 20px;}
+  .result-empty .ring{width:56px;height:56px;border-radius:50%;border:1.5px dashed var(--border);display:flex;align-items:center;justify-content:center;font-size:20px;color:var(--muted-2);}
+  .result-empty p{font-size:13px;max-width:220px;line-height:1.5;}
+  .verdict-row{display:flex;align-items:center;gap:18px;margin-bottom:18px;}
+  .score-badge{width:78px;height:78px;border-radius:50%;flex-shrink:0;display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:var(--mono);border:2px solid var(--sev-color,var(--accent));background:color-mix(in srgb, var(--sev-color, var(--accent)) 8%, transparent);animation:popIn .35s ease;}
+  @keyframes popIn{from{transform:scale(.85);opacity:0;}to{transform:scale(1);opacity:1;}}
+  .score-badge .num{font-size:22px;font-weight:700;line-height:1;color:var(--sev-color,var(--accent));}
+  .score-badge .of{font-size:9px;color:var(--muted-2);margin-top:2px;}
+  .verdict-text .sev-label{font-family:var(--mono);font-size:11px;letter-spacing:0.08em;color:var(--sev-color,var(--accent));text-transform:uppercase;font-weight:600;margin-bottom:4px;}
+  .verdict-text h3{font-size:18px;font-weight:700;} .verdict-text p{font-size:12.5px;color:var(--muted);margin-top:3px;}
+  .section-label{font-family:var(--mono);font-size:11px;color:var(--muted-2);letter-spacing:0.05em;margin:18px 0 10px;padding-top:16px;border-top:1px solid var(--border-soft);}
+  .section-label:first-of-type{border-top:none;padding-top:0;margin-top:4px;}
+  .indicator{display:flex;gap:10px;padding:10px 0;border-bottom:1px solid var(--border-soft);align-items:flex-start;}
+  .indicator:last-child{border-bottom:none;}
+  .indicator .dot{width:7px;height:7px;border-radius:50%;margin-top:6px;flex-shrink:0;background:var(--sev-color,var(--accent));}
+  .indicator .body b{font-size:13px;font-weight:600;display:block;} .indicator .body span{font-size:12.5px;color:var(--muted);line-height:1.5;}
+  .indicator.clean{color:var(--low);} .indicator.clean .dot{background:var(--low);}
+  .action-list{list-style:none;}
+  .action-list li{font-size:13px;color:var(--text);padding:8px 0 8px 22px;position:relative;border-bottom:1px solid var(--border-soft);line-height:1.5;}
+  .action-list li:last-child{border-bottom:none;}
+  .action-list li::before{content:"→";position:absolute;left:0;color:var(--accent);font-family:var(--mono);}
+
+  .stats-row{display:grid;grid-template-columns:repeat(6,1fr);gap:14px;margin-bottom:22px;}
+  @media (max-width:900px){.stats-row{grid-template-columns:repeat(3,1fr);}}
+  .stat-card{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:16px;}
+  .stat-card .n{font-family:var(--mono);font-size:26px;font-weight:700;} .stat-card .l{font-size:11.5px;color:var(--muted);margin-top:4px;}
+  .stat-card.critical .n{color:var(--critical);} .stat-card.high .n{color:var(--high);} .stat-card.medium .n{color:var(--medium);} .stat-card.low .n{color:var(--low);}
+
+  .connector-row{display:grid;grid-template-columns:repeat(2,1fr);gap:14px;margin-bottom:22px;}
+  @media (max-width:760px){.connector-row{grid-template-columns:1fr;}}
+  .connector-card{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:16px;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;}
+  .connector-card .cname{font-weight:700;font-size:13.5px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+  .connector-card .csub{font-size:11.5px;color:var(--muted);font-family:var(--mono);margin-top:4px;}
+  .connector-status{font-family:var(--mono);font-size:11px;color:var(--low);display:flex;align-items:center;gap:6px;white-space:nowrap;}
+  .connector-status.off{color:var(--muted-2);}
+  .connector-status.off .live-dot{background:var(--muted-2);animation:none;box-shadow:none;}
+  .mini-btn{font-family:var(--mono);font-size:11px;color:var(--text);background:var(--panel-2);border:1px solid var(--border);padding:6px 10px;border-radius:6px;cursor:pointer;white-space:nowrap;}
+  .mini-btn:hover{border-color:var(--accent);color:var(--accent);}
+  .mini-btn.danger:hover{border-color:var(--critical);color:var(--critical);}
+
+  .history-panel{background:var(--panel);border:1px solid var(--border);border-radius:14px;overflow:hidden;margin-bottom:22px;}
+  .history-head{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border);gap:10px;flex-wrap:wrap;}
+  .history-head h2{font-size:14px;font-weight:700;}
+  .history-head span.sub{color:var(--muted-2); font-weight:400; font-size:12.5px;}
+  .clear-btn{font-family:var(--mono);font-size:11px;color:var(--muted);background:none;border:1px solid var(--border);padding:6px 10px;border-radius:6px;cursor:pointer;}
+  .clear-btn:hover{color:var(--critical);border-color:var(--critical);}
+  .hist-row{display:grid;grid-template-columns:70px 90px 1fr 90px 130px;gap:14px;align-items:center;padding:14px 20px;border-bottom:1px solid var(--border-soft);cursor:pointer;}
+  .hist-row:hover{background:var(--panel-2);} .hist-row:last-child{border-bottom:none;}
+  @media (max-width:640px){.hist-row{grid-template-columns:60px 60px 1fr;} .hist-row .h-time,.hist-row .h-score{display:none;}}
+  .src-pill{font-family:var(--mono);font-size:10px;color:var(--muted);border:1px solid var(--border);border-radius:5px;padding:2px 6px;text-align:center;text-transform:uppercase;}
+  .sev-pill{font-family:var(--mono);font-size:10.5px;font-weight:600;padding:4px 8px;border-radius:5px;text-align:center;text-transform:uppercase;letter-spacing:0.03em;color:#fff;}
+  .sev-pill.CRITICAL{background:var(--critical);} .sev-pill.HIGH{background:var(--high);} .sev-pill.MEDIUM{background:var(--medium);color:#1A1200;} .sev-pill.LOW{background:var(--low);}
+  .h-excerpt{font-size:12.5px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;} .h-excerpt b{color:var(--text);font-weight:600;}
+  .h-score{font-family:var(--mono);font-size:13px;color:var(--muted);text-align:right;} .h-time{font-family:var(--mono);font-size:11px;color:var(--muted-2);text-align:right;}
+  .empty-hist{padding:50px 20px;text-align:center;color:var(--muted-2);font-size:13px;}
+
+  .alert-row{display:flex; gap:14px; padding:14px 20px; border-bottom:1px solid var(--border-soft); align-items:flex-start;}
+  .alert-row:last-child{border-bottom:none;}
+  .alert-row .body{flex:1;} .alert-row .body b{font-size:13px;} .alert-row .body p{font-size:12px;color:var(--muted);margin-top:3px;}
+  .ack-btn{font-family:var(--mono);font-size:11px;color:var(--muted);background:none;border:1px solid var(--border);padding:6px 10px;border-radius:6px;cursor:pointer;flex-shrink:0;}
+  .ack-btn:hover{color:var(--low);border-color:var(--low);}
+
+  .toast{position:fixed; bottom:20px; right:20px; background:var(--panel); border:1px solid var(--border); border-left:3px solid var(--sev-color, var(--accent)); border-radius:8px; padding:12px 16px; font-size:12.5px; max-width:300px; box-shadow:0 8px 24px var(--shadow); opacity:0; transform:translateY(8px); transition:opacity .25s, transform .25s; z-index:50;}
+  .toast.show{opacity:1; transform:translateY(0);}
+  .toast b{display:block; margin-bottom:2px;}
+  .toast span{color:var(--muted);}
+
+  footer{text-align:center;color:var(--muted-2);font-size:11px;font-family:var(--mono);margin-top:40px;line-height:1.7;}
+
+  /* Settings modal */
+  .modal-overlay{position:fixed;inset:0;background:var(--overlay);display:none;align-items:center;justify-content:center;z-index:100;padding:20px;}
+  .modal-overlay.show{display:flex;}
+  .modal{background:var(--panel);border:1px solid var(--border);border-radius:14px;max-width:460px;width:100%;max-height:88vh;overflow-y:auto;box-shadow:0 20px 60px var(--shadow);}
+  .modal-head{display:flex;align-items:center;justify-content:space-between;padding:18px 20px;border-bottom:1px solid var(--border);}
+  .modal-head h2{font-size:15px;font-weight:700;}
+  .modal-body{padding:20px;}
+  .modal-body p{font-size:12.5px;color:var(--muted);line-height:1.6;margin-bottom:12px;}
+  .modal-body label{display:block;font-family:var(--mono);font-size:11px;color:var(--muted-2);margin-bottom:6px;letter-spacing:0.03em;}
+  .modal-body input[type="text"]{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:var(--mono);font-size:12.5px;padding:10px 12px;outline:none;margin-bottom:14px;}
+  .modal-body input[type="text"]:focus{border-color:var(--accent);}
+  .modal-steps{list-style:none;counter-reset:step;margin-bottom:16px;}
+  .modal-steps li{counter-increment:step;font-size:12px;color:var(--muted);line-height:1.6;padding:6px 0 6px 26px;position:relative;}
+  .modal-steps li::before{content:counter(step);position:absolute;left:0;top:5px;width:17px;height:17px;border-radius:50%;border:1px solid var(--border);color:var(--muted-2);font-family:var(--mono);font-size:10px;display:flex;align-items:center;justify-content:center;}
+  .modal-steps a{color:var(--accent);text-decoration:none;} .modal-steps a:hover{text-decoration:underline;}
+  .conn-status-box{display:flex;align-items:center;justify-content:space-between;background:var(--panel-2);border:1px solid var(--border);border-radius:9px;padding:12px 14px;margin-bottom:14px;gap:10px;flex-wrap:wrap;}
+  .conn-status-box .who{font-size:12.5px;font-family:var(--mono);}
+  .modal-actions{display:flex;gap:10px;}
+  .modal-actions button{flex:1;padding:11px;border-radius:9px;font-family:var(--sans);font-weight:600;font-size:13px;cursor:pointer;}
+  .btn-primary{background:var(--accent);color:var(--accent-contrast);border:none;}
+  .btn-primary:hover{filter:brightness(1.08);}
+  .btn-primary:disabled{opacity:.45;cursor:not-allowed;filter:none;}
+  .btn-ghost{background:transparent;color:var(--muted);border:1px solid var(--border);}
+  .btn-ghost:hover{color:var(--text);border-color:var(--text);}
+
+  .hint-banner{display:flex;align-items:flex-start;gap:12px;background:var(--panel);border:1px solid var(--border);border-left:3px solid var(--accent);border-radius:10px;padding:14px 16px;margin-bottom:20px;}
+  .hint-banner p{font-size:12.5px;color:var(--muted);line-height:1.5;}
+  .hint-banner b{color:var(--text);}
+  .hint-banner button{background:none;border:none;color:var(--muted-2);cursor:pointer;font-size:16px;line-height:1;flex-shrink:0;}
+  .hint-banner button:hover{color:var(--text);}
+</style>
+</head>
+<body>
+
+<div class="shell">
+  <header>
+    <div class="brand">
+      <div class="brand-mark"></div>
+      <div class="brand-text">
+        <h1>THREATGUARD AI</h1>
+        <p>real-time threat &amp; phishing detection</p>
+      </div>
+    </div>
+    <div class="header-right">
+      <div class="live-pill"><div class="live-dot"></div><span>auto-scan active</span></div>
+      <nav class="tabs">
+        <button class="active" data-view="scan">Scan</button>
+        <button data-view="dashboard">Dashboard</button>
+        <button data-view="alerts">Alerts <span class="badge-count" id="alertBadge">0</span></button>
+      </nav>
+      <button class="icon-btn" id="settingsBtn" title="Connect Gmail">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 15a3 3 0 100-6 3 3 0 000 6z"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 11-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06A1.65 1.65 0 005.6 15a1.65 1.65 0 00-1.51-1H4a2 2 0 010-4h.09A1.65 1.65 0 005.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06A1.65 1.65 0 009 4.6a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+      </button>
+      <button class="icon-btn" id="themeBtn" title="Toggle theme">
+        <svg id="themeIconMoon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
+        <svg id="themeIconSun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:none;"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- SCAN VIEW -->
+  <section class="view active" id="view-scan">
+    <div class="scan-grid">
+      <div class="panel">
+        <div class="panel-head"><h2>Submit for analysis</h2><span class="eyebrow">INPUT LAYER</span></div>
+        <div class="type-select">
+          <button class="active" data-type="email">Email</button>
+          <button data-type="url">URL</button>
+          <button data-type="log">System log</button>
+        </div>
+        <textarea id="inputText" placeholder="Paste an email body, a URL, or a log entry here..."></textarea>
+        <div class="sample-row">
+          <button id="sampleBtn">Load sample</button>
+          <button id="clearBtn">Clear</button>
+        </div>
+        <button class="scan-btn" id="scanBtn">Run threat scan</button>
+        <div class="api-note">rule engine + real-time AI analysis, same engine the automatic sweeps use</div>
+      </div>
+      <div class="panel" id="resultPanel">
+        <div class="panel-head"><h2>Analysis result</h2><span class="eyebrow">RISK SCORE</span></div>
+        <div class="result-empty" id="resultEmpty">
+          <div class="ring">＋</div>
+          <p>Submit an email, URL, or log entry to see its threat score, matched indicators, and recommended response.</p>
+        </div>
+        <div id="resultBody" style="display:none;"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- DASHBOARD VIEW -->
+  <section class="view" id="view-dashboard">
+    <div class="hint-banner" id="hintBanner" style="display:none;">
+      <p><b>Want real inbox scanning?</b> Connect your Gmail account from the settings icon in the top right — new mail gets scanned automatically as it arrives.</p>
+      <button id="hintClose" title="Dismiss">×</button>
+    </div>
+    <div class="stats-row">
+      <div class="stat-card"><div class="n" id="statTotal">0</div><div class="l">Total scans</div></div>
+      <div class="stat-card critical"><div class="n" id="statCritical">0</div><div class="l">Critical</div></div>
+      <div class="stat-card high"><div class="n" id="statHigh">0</div><div class="l">High</div></div>
+      <div class="stat-card medium"><div class="n" id="statMedium">0</div><div class="l">Medium</div></div>
+      <div class="stat-card low"><div class="n" id="statLow">0</div><div class="l">Low</div></div>
+      <div class="stat-card"><div class="n" id="statOpenAlerts">0</div><div class="l">Open alerts</div></div>
+    </div>
+
+    <div class="connector-row" id="connectorRow"></div>
+
+    <div class="history-panel">
+      <div class="history-head">
+        <h2>Scan history <span class="sub">— manual + automatic sweeps</span></h2>
+        <button class="clear-btn" id="clearHistBtn">Clear history</button>
+      </div>
+      <div id="historyList"></div>
+    </div>
+  </section>
+
+  <!-- ALERTS VIEW -->
+  <section class="view" id="view-alerts">
+    <div class="history-panel">
+      <div class="history-head"><h2>Open alerts</h2><span class="sub">MEDIUM severity and above</span></div>
+      <div id="alertsList"></div>
+    </div>
+  </section>
+
+  <footer>THREATGUARD AI · runs entirely in this browser tab · connect Gmail for live inbox scanning, or explore with demo data · log sweep uses simulated sample data · every scan also gets a real-time AI analysis</footer>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- SETTINGS / GMAIL CONNECTION MODAL -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal">
+    <div class="modal-head">
+      <h2>Connect Gmail</h2>
+      <button class="icon-btn" id="modalCloseBtn" title="Close">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="conn-status-box">
+        <span class="who" id="connWho">Not connected</span>
+        <span class="demo-badge" id="connBadge">DEMO DATA</span>
+      </div>
+      <p>Scan real messages from your inbox as they arrive. Google requires every app to register its own OAuth client before it can read Gmail — that's a one-time setup:</p>
+      <ol class="modal-steps">
+        <li>Open <a href="https://console.cloud.google.com/apis/credentials" target="_blank" rel="noopener">Google Cloud Console → Credentials</a> and create an OAuth Client ID (type: Web application).</li>
+        <li>Add this page's URL as an authorized JavaScript origin, and enable the Gmail API for the project.</li>
+        <li>Paste the Client ID below and connect.</li>
+      </ol>
+      <label for="clientIdInput">Google OAuth Client ID</label>
+      <input type="text" id="clientIdInput" placeholder="xxxxxxxxxxxx.apps.googleusercontent.com">
+      <div class="modal-actions">
+        <button class="btn-ghost" id="saveClientIdBtn">Save</button>
+        <button class="btn-primary" id="connectGmailBtn" disabled>Connect Gmail</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* =========================================================================
+   DETECTION ENGINE — weighted heuristic rules over email / URL / log text.
+   ========================================================================= */
+const URL_REGEX = /\b(?:https?:\/\/|www\.)[^\s<>"')]+/gi;
+const BRANDS = ['paypal','microsoft','apple','amazon','google','bankofamerica','netflix','office365','chase','wellsfargo'];
+const URGENCY_PHRASES = ['urgent','immediately','act now','final notice','24 hours','verify your account','suspended','confirm your identity','click here','limited time','failure to act','unusual activity','update your payment','your account will be','locked out','security alert','unauthorized access','claim your','password will expire'];
+
+function severityFor(score){ if(score>=70) return 'CRITICAL'; if(score>=45) return 'HIGH'; if(score>=20) return 'MEDIUM'; return 'LOW'; }
+
+function analyze(text, itemType){
+  const indicators = [];
+  let score = 0;
+  const lower = text.toLowerCase();
+  const hit = (weight, title, detail) => { score += weight; indicators.push({weight, title, detail}); };
+
+  const urls = text.match(URL_REGEX) || [];
+  urls.forEach(url=>{
+    if(/^https?:\/\/(\d{1,3}\.){3}\d{1,3}/i.test(url)){
+      hit(22, 'IP address used as hostname', `"${url.slice(0,50)}" links directly to a raw IP address instead of a domain — a common tactic to bypass domain reputation checks.`);
+    }
+    const tldMatch = url.match(/\.([a-z]{2,10})(\/|$|\?)/i);
+    if(/\.(xyz|top|tk|club|gq|ml|cf|work|support|win)(\/|$|\?)/i.test(url)){
+      hit(15, 'High-risk top-level domain', `The link uses a TLD (${tldMatch?tldMatch[1]:'?'}) frequently associated with disposable phishing infrastructure.`);
+    }
+    if(/https?:\/\/[^/\s]*@/.test(url)){
+      hit(20, 'Deceptive "@" redirect in URL', 'The URL contains an "@" symbol, which browsers ignore everything before — masking the true destination.');
+    }
+    const domainMatch = url.match(/^https?:\/\/([^/]+)/i);
+    const domain = domainMatch ? domainMatch[1].toLowerCase() : '';
+    BRANDS.forEach(b=>{
+      if(lower.includes(b) && domain && !domain.includes(b)){
+        hit(24, `Brand impersonation: "${b}"`, `The message references "${b}" but the link's domain (${domain}) does not belong to that organization.`);
+      }
+    });
+    if(/^http:\/\//i.test(url)){
+      hit(6, 'Unencrypted link (HTTP)', 'The link does not use HTTPS, offering no transport encryption for any submitted data.');
+    }
+  });
+
+  const matchedUrgency = URGENCY_PHRASES.filter(p=>lower.includes(p));
+  if(matchedUrgency.length){
+    const preview = matchedUrgency.slice(0,4).map(p=>`"${p}"`).join(', ');
+    const suffix = matchedUrgency.length>4 ? '…' : '';
+    hit(Math.min(6*matchedUrgency.length, 26), 'Urgency / pressure language', `Detected ${matchedUrgency.length} phrase(s) designed to provoke a fast, unconsidered response: ${preview}${suffix}.`);
+  }
+
+  if(/(enter|confirm|verify|re-?enter)\s+(your\s+)?(password|credentials|ssn|social security|card number|cvv|pin)/i.test(text)){
+    hit(24, 'Requests sensitive credentials', 'The message directly asks the recipient to submit a password, card number, or other credential — legitimate services rarely request this by email or link.');
+  }
+  if(/wire transfer|gift card|bitcoin|crypto(currency)?|western union/i.test(text)){
+    hit(18, 'Unusual payment method requested', 'The message references an irreversible or hard-to-trace payment method, common in fraud and business-email-compromise schemes.');
+  }
+  if(/dear (valued )?(customer|user|member|sir\/madam)/i.test(text)){
+    hit(8, 'Generic, non-personalized greeting', "The message opens with a generic salutation rather than the recipient's name, typical of mass-sent phishing campaigns.");
+  }
+  const senderMatch = text.match(/from:\s*(.+)/i);
+  if(senderMatch){
+    const senderLine = senderMatch[1];
+    const displayBrand = ['paypal','microsoft','apple','amazon','google','bank','netflix'].find(b=>senderLine.toLowerCase().includes(b));
+    const emailDomainMatch = senderLine.match(/@([\w.-]+)/);
+    const emailDomain = emailDomainMatch ? emailDomainMatch[1] : null;
+    if(displayBrand && emailDomain && !emailDomain.toLowerCase().includes(displayBrand)){
+      hit(20, 'Display name / sender domain mismatch', `The sender's display name references "${displayBrand}" but the actual sending domain (${emailDomain}) doesn't match, a hallmark of spoofed sender addresses.`);
+    }
+  }
+  if(/attach(ed|ment)/i.test(text) && /\.(exe|scr|js|vbs|zip|bat|jar)\b/i.test(text)){
+    hit(20, 'Executable-type attachment referenced', 'The message references an attachment with an executable or script extension, a common malware delivery method.');
+  }
+
+  if(itemType === 'log'){
+    const failCount = (text.match(/failed password/gi)||[]).length;
+    if(failCount >= 3){
+      hit(Math.min(6*failCount, 30), 'Repeated authentication failures', `${failCount} failed login attempts detected in sequence, consistent with a brute-force or credential-stuffing attempt.`);
+    }
+    if(/accepted password for root/i.test(text) && failCount >= 3){
+      hit(26, 'Successful login for root after failures', 'A successful "root" authentication immediately follows multiple failures — indicating a brute-force attempt may have succeeded.');
+    }
+    if(/chmod\s+777|chmod\s+\+s|passwd\s+root|usermod/i.test(text)){
+      hit(18, 'Privilege / permission escalation command', 'A command altering file permissions or user privileges was logged, often used to establish persistence after a compromise.');
+    }
+    if(/outbound connection.*(4444|1337|31337|6667)/i.test(text) || /nc\s+-e|reverse shell|\/bin\/sh/i.test(text)){
+      hit(28, 'Suspicious outbound connection', 'An outbound connection to a port commonly associated with command-and-control channels or reverse shells was logged.');
+    }
+  }
+
+  score = Math.min(Math.round(score), 100);
+  return { score, severity: severityFor(score), indicators };
+}
+
+function escapeHtml(s){
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+/* =========================================================================
+   AI ANALYSIS — reads the item in context (beyond fixed keyword rules) and
+   gives a short plain-language verdict. Runs alongside the rule engine
+   above, never replacing it — the rule score/severity stay deterministic
+   and auditable, the AI note adds judgment/nuance.
+   ========================================================================= */
+async function aiAnalyze(text, itemType, heuristic){
+  try{
+    const ruleSummary = heuristic.indicators.length
+      ? heuristic.indicators.map(i=>i.title).join('; ')
+      : 'no rule-based indicators matched';
+    const prompt = `You are a security analyst. A rule-based scanner already flagged this ${itemType==='log'?'system log excerpt':itemType==='url'?'URL':'email'} with a risk score of ${heuristic.score}/100 (${heuristic.severity}) and these matched indicators: ${ruleSummary}.
+
+Read the raw content below yourself and give a short (2-4 sentence), plain-language verdict for a non-technical user: do you agree with the rule engine, what's the most important thing to know, and is there anything the rules likely missed or got wrong? Be direct and concrete. Do not repeat the indicator list back verbatim. Do not mention what model or company you are.
+
+--- CONTENT START ---
+${text.slice(0,3000)}
+--- CONTENT END ---`;
+
+    const response = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "claude-sonnet-4-6",
+        max_tokens: 1000,
+        messages: [{ role: "user", content: prompt }]
+      })
+    });
+    const data = await response.json();
+    const parts = (data && data.content ? data.content : []).filter(b=>b.type==='text').map(b=>b.text);
+    const out = parts.join('\n').trim();
+    return out || null;
+  }catch(e){
+    console.error('AI analysis failed', e);
+    return null;
+  }
+}
+
+/* =========================================================================
+   DEMO DATA — used until Gmail is connected, so the app is never empty.
+   Generic, fictional messages (not tied to any real inbox).
+   ========================================================================= */
+const DEMO_EMAILS = [
+`From: Notifications <updates@teamboard-app.com>
+Subject: Someone commented on your task
+
+Alex Rivera left a comment on "Q3 launch checklist". Open the board to reply.`,
+`From: PayPal Security <account-alert@paypal-secure-verify.tk>
+Subject: Your account will be suspended in 24 hours
+
+Dear valued customer, we detected unusual activity on your account. Click here to verify your identity immediately or your account will be locked: http://paypal-secure-verify.tk/login?ref=88x`,
+`From: Newsletter <hello@designweekly.co>
+Subject: 5 layout patterns worth stealing this week
+
+This week: bento grids, oversized type, and a roundup of portfolio sites we liked.`,
+`From: IT Helpdesk <it-support@corp-mail-service.top>
+Subject: URGENT: password will expire in 2 hours
+
+Your mailbox password will expire shortly. Confirm your identity and re-enter your password here to avoid lockout: http://192.168.44.12/reset`,
+`From: Calendar <calendar-notification@company.com>
+Subject: Reminder: Design review at 3:00 PM
+
+This is an automated reminder for your upcoming meeting "Design review" in 30 minutes.`,
+`From: Delivery Services <tracking@parcel-notify.win>
+Subject: Failure to act: package on hold
+
+Your package could not be delivered due to an unpaid customs fee. Confirm your card number to release the shipment before it is returned.`,
+`From: HR <hr@company.com>
+Subject: Updated benefits enrollment deadline
+
+The open enrollment window has been extended to the end of the month. No action needed if you already submitted your selections.`,
+`From: Finance Dept <payroll@corp-secure-portal.support>
+Subject: Wire transfer approval needed immediately
+
+Please process a wire transfer of $12,400 to the attached account today. This is time sensitive, act now and confirm once sent.`,
+`From: GitHub <notifications@github.com>
+Subject: [org/repo] New pull request opened
+
+A new pull request "Fix flaky CI job" was opened and is awaiting review.`,
+`From: Microsoft Support <security@0ffice365-verify.club>
+Subject: Unusual sign-in activity detected
+
+We noticed a sign-in from a new device. Verify your account and confirm your credentials now to prevent unauthorized access.`
+];
+const MALICIOUS_LOGS = [
+`2026-09-10 03:14:02 sshd[8841]: Failed password for root from 185.220.101.4 port 51422
+2026-09-10 03:14:05 sshd[8842]: Failed password for root from 185.220.101.4 port 51430
+2026-09-10 03:14:08 sshd[8843]: Failed password for root from 185.220.101.4 port 51441
+2026-09-10 03:14:11 sshd[8844]: Accepted password for root from 185.220.101.4 port 51452
+2026-09-10 03:14:12 sudo: root : USER=root ; COMMAND=/usr/bin/chmod 777 /etc/shadow
+2026-09-10 03:15:40 New outbound connection to 45.9.20.11:4444 established by process bash`,
+`2026-09-10 09:02:11 sshd[1122]: Failed password for admin from 91.132.10.7 port 40211
+2026-09-10 09:02:14 sshd[1123]: Failed password for admin from 91.132.10.7 port 40219
+2026-09-10 09:02:17 sshd[1124]: Failed password for admin from 91.132.10.7 port 40227
+2026-09-10 09:02:20 sshd[1125]: Failed password for admin from 91.132.10.7 port 40235`
+];
+const CLEAN_LOGS = [
+`2026-09-10 08:00:01 systemd[1]: Started daily backup job.
+2026-09-10 08:00:44 backup: Backup completed successfully, 4.2GB written.
+2026-09-10 08:01:00 cron[203]: (root) CMD (logrotate /etc/logrotate.conf)`,
+`2026-09-10 10:15:03 nginx: 200 GET /api/health from 10.0.0.4
+2026-09-10 10:15:04 nginx: 200 GET /api/status from 10.0.0.4`
+];
+const pick = arr => arr[Math.floor(Math.random()*arr.length)];
+const makeId = () => Math.random().toString(36).slice(2,10);
+
+// Cycles endlessly through the demo inbox so the dashboard always has
+// fresh-looking activity until a real Gmail account is connected.
+function demoEmailSweep(){
+  const out = [];
+  const n = 2;
+  for(let i=0;i<n;i++){
+    out.push({id:makeId(), text: DEMO_EMAILS[state.emailCursor % DEMO_EMAILS.length]});
+    state.emailCursor += 1;
+  }
+  return out;
+}
+function fetchNewLogLines(){
+  const count = 1 + Math.floor(Math.random()*2);
+  const out = [];
+  for(let i=0;i<count;i++){ const mal = Math.random() < 0.35; out.push({id:makeId(), text: pick(mal?MALICIOUS_LOGS:CLEAN_LOGS)}); }
+  return out;
+}
+
+/* =========================================================================
+   GMAIL LIVE CONNECTION — Google Identity Services OAuth (implicit token
+   flow), entirely client-side. Requires the user's own Google Cloud OAuth
+   Client ID (Google does not allow a shared client ID across arbitrary
+   sites reading someone's Gmail). Once connected, real unread/new inbox
+   messages are pulled and scanned by the same detection engine.
+   ========================================================================= */
+const GMAIL_SCOPE = 'https://www.googleapis.com/auth/gmail.readonly';
+let gmailTokenClient = null;
+let gmailAccessToken = null;
+let gmailTokenExpiry = 0;
+
+function b64urlDecode(data){
+  try{
+    const norm = data.replace(/-/g,'+').replace(/_/g,'/');
+    return decodeURIComponent(escape(atob(norm)));
+  }catch(e){ return ''; }
+}
+function extractPlainText(payload){
+  if(!payload) return '';
+  if(payload.mimeType === 'text/plain' && payload.body && payload.body.data) return b64urlDecode(payload.body.data);
+  if(payload.parts){
+    for(const p of payload.parts){ const t = extractPlainText(p); if(t) return t; }
+  }
+  if(payload.body && payload.body.data && !payload.parts) return b64urlDecode(payload.body.data);
+  return '';
+}
+function headerValue(headers, name){
+  const h = (headers||[]).find(x=>x.name.toLowerCase()===name.toLowerCase());
+  return h ? h.value : '';
+}
+
+function initGmailTokenClient(clientId){
+  if(!window.google || !window.google.accounts || !window.google.accounts.oauth2) return null;
+  return window.google.accounts.oauth2.initTokenClient({
+    client_id: clientId,
+    scope: GMAIL_SCOPE,
+    callback: async (resp)=>{
+      if(resp.error){ toastMessage('Gmail connection failed', resp.error); return; }
+      gmailAccessToken = resp.access_token;
+      gmailTokenExpiry = Date.now() + (resp.expires_in ? resp.expires_in*1000 : 3500*1000);
+      try{
+        const profile = await fetch('https://gmail.googleapis.com/gmail/v1/users/me/profile', {
+          headers:{ Authorization: 'Bearer ' + gmailAccessToken }
+        }).then(r=>r.json());
+        state.gmailEmail = profile.emailAddress || 'connected';
+      }catch(e){ state.gmailEmail = 'connected'; }
+      state.gmailConnected = true;
+      saveState();
+      renderModal();
+      renderDashboard();
+      toastMessage('Gmail connected', state.gmailEmail);
+    }
+  });
+}
+
+function connectGmail(){
+  const clientId = (state.gmailClientId||'').trim();
+  if(!clientId){ return; }
+  if(!gmailTokenClient){ gmailTokenClient = initGmailTokenClient(clientId); }
+  if(!gmailTokenClient){ toastMessage('Google sign-in not ready', 'Give the page a second to finish loading, then try again.'); return; }
+  gmailTokenClient.requestAccessToken({ prompt: gmailAccessToken ? '' : 'consent' });
+}
+function disconnectGmail(){
+  gmailAccessToken = null; gmailTokenExpiry = 0;
+  state.gmailConnected = false; state.gmailEmail = null;
+  saveState(); renderModal(); renderDashboard();
+}
+function ensureFreshToken(){
+  return new Promise((resolve)=>{
+    if(gmailAccessToken && Date.now() < gmailTokenExpiry - 30000){ resolve(true); return; }
+    if(!gmailTokenClient){ resolve(false); return; }
+    const prevCallback = gmailTokenClient.callback;
+    gmailTokenClient.requestAccessToken({ prompt: '' });
+    // best-effort: the shared callback above already refreshes gmailAccessToken
+    setTimeout(()=>resolve(!!gmailAccessToken), 900);
+  });
+}
+
+async function fetchRealGmail(){
+  if(!state.gmailConnected) return [];
+  const ok = await ensureFreshToken();
+  if(!ok || !gmailAccessToken) return [];
+  try{
+    const listRes = await fetch('https://gmail.googleapis.com/gmail/v1/users/me/messages?maxResults=6&labelIds=INBOX', {
+      headers:{ Authorization: 'Bearer ' + gmailAccessToken }
+    }).then(r=>r.json());
+    if(listRes.error){
+      if(listRes.error.code === 401){ toastMessage('Gmail session expired', 'Reconnect from the settings icon.'); disconnectGmail(); }
+      return [];
+    }
+    const messages = listRes.messages || [];
+    const unseen = messages.filter(m => !state.gmailSeenIds.includes(m.id)).slice(0,3);
+    const out = [];
+    for(const m of unseen){
+      const full = await fetch(`https://gmail.googleapis.com/gmail/v1/users/me/messages/${m.id}?format=full`, {
+        headers:{ Authorization: 'Bearer ' + gmailAccessToken }
+      }).then(r=>r.json());
+      if(!full || !full.payload) continue;
+      const from = headerValue(full.payload.headers, 'From');
+      const subject = headerValue(full.payload.headers, 'Subject');
+      const body = extractPlainText(full.payload) || full.snippet || '';
+      out.push({ id: m.id, text: `From: ${from}\nSubject: ${subject}\n\n${body}` });
+      state.gmailSeenIds.unshift(m.id);
+    }
+    if(state.gmailSeenIds.length > 500) state.gmailSeenIds.length = 500;
+    return out;
+  }catch(e){
+    console.error('Gmail fetch failed', e);
+    return [];
+  }
+}
+
+/* =========================================================================
+   THEME — persisted light/dark switch.
+   ========================================================================= */
+const THEME_KEY = 'threat_guard_theme_v1';
+function applyTheme(theme){
+  document.documentElement.setAttribute('data-theme', theme);
+  document.getElementById('themeIconMoon').style.display = theme==='light' ? 'block' : 'none';
+  document.getElementById('themeIconSun').style.display = theme==='light' ? 'none' : 'block';
+}
+async function loadTheme(){
+  let theme = window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+  try{
+    const res = await window.storage.get(THEME_KEY, false);
+    if(res && res.value) theme = res.value;
+  }catch(e){ /* no saved preference yet */ }
+  applyTheme(theme);
+}
+document.getElementById('themeBtn').addEventListener('click', async ()=>{
+  const current = document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark';
+  const next = current === 'light' ? 'dark' : 'light';
+  applyTheme(next);
+  try{ await window.storage.set(THEME_KEY, next, false); }catch(e){ /* non-fatal */ }
+});
+
+/* =========================================================================
+   PERSISTENT STATE — window.storage keeps history/alerts/settings across
+   visits to this artifact (personal to you, not shared).
+   ========================================================================= */
+const STORAGE_KEY = 'threat_guard_state_v2';
+const MAX_SCANS_KEPT = 300;
+
+let state = {
+  scans: [],
+  alerts: [],
+  emailCursor: 0,
+  gmailConnected: false,
+  gmailEmail: null,
+  gmailClientId: '',
+  gmailSeenIds: [],
+  hintDismissed: false,
+  connectors: {
+    gmail: {intervalSeconds:30, lastRunAt:null, lastRunCount:0, totalRuns:0},
+    log_ingest: {intervalSeconds:45, lastRunAt:null, lastRunCount:0, totalRuns:0}
+  }
+};
+
+async function loadState(){
+  try{
+    const res = await window.storage.get(STORAGE_KEY, false);
+    if(res && res.value){ state = Object.assign({}, state, JSON.parse(res.value)); }
+  }catch(e){ /* no saved state yet — start fresh */ }
+  if(typeof state.emailCursor !== 'number') state.emailCursor = 0;
+  if(!Array.isArray(state.gmailSeenIds)) state.gmailSeenIds = [];
+  // Gmail access tokens are never persisted — a fresh connect is required each session.
+  state.gmailConnected = false;
+}
+let saveTimer = null;
+function saveState(){
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(async ()=>{
+    try{ await window.storage.set(STORAGE_KEY, JSON.stringify(state), false); }
+    catch(e){ console.error('storage save failed', e); }
+  }, 250);
+}
+
+function excerpt(text, n=90){ return text.replace(/\s+/g,' ').trim().slice(0,n); }
+
+function recordScan(source, itemType, fullText, result){
+  const rec = {
+    id: Date.now() + Math.random(),
+    source, item_type: itemType,
+    excerpt: excerpt(fullText),
+    full_text: fullText,
+    score: result.score, severity: result.severity,
+    indicators: result.indicators,
+    aiAnalysis: null, aiPending: true,
+    created_at: new Date().toISOString()
+  };
+  state.scans.unshift(rec);
+  if(state.scans.length > MAX_SCANS_KEPT) state.scans.length = MAX_SCANS_KEPT;
+
+  if(['MEDIUM','HIGH','CRITICAL'].includes(result.severity)){
+    const top = result.indicators[0] ? result.indicators[0].title : 'Multiple risk factors';
+    state.alerts.unshift({
+      id: rec.id, scan_id: rec.id, severity: result.severity,
+      title: `[${source}] ${result.severity} — ${top}`,
+      summary: excerpt(fullText, 140), acknowledged: false,
+      created_at: rec.created_at
+    });
+    if(state.alerts.length > 200) state.alerts.length = 200;
+    if(source !== 'manual') showToast(rec);
+  }
+  saveState();
+  return rec;
+}
+
+function runAiForRecord(rec, text, itemType, result){
+  aiAnalyze(text, itemType, result).then(aiText=>{
+    rec.aiAnalysis = aiText;
+    rec.aiPending = false;
+    saveState();
+    if(currentlyShownId === rec.id){ renderResult(rec.score, rec.severity, rec.indicators, rec.aiAnalysis, false); }
+    refreshIfVisible();
+  });
+}
+let currentlyShownId = null;
+
+function showToast(rec){
+  const meta = severityMeta[rec.severity];
+  const t = document.getElementById('toast');
+  t.style.setProperty('--sev-color', meta.color);
+  const srcLabel = rec.source === 'gmail' ? 'Gmail sweep' : rec.source === 'manual' ? 'Manual scan' : 'Log sweep';
+  t.innerHTML = `<b>${rec.severity} — ${srcLabel}</b><span>${escapeHtml(rec.excerpt)}</span>`;
+  t.classList.add('show');
+  clearTimeout(t._hideTimer);
+  t._hideTimer = setTimeout(()=>t.classList.remove('show'), 4500);
+}
+function toastMessage(title, sub){
+  const t = document.getElementById('toast');
+  t.style.setProperty('--sev-color', 'var(--accent)');
+  t.innerHTML = `<b>${escapeHtml(title)}</b><span>${escapeHtml(sub||'')}</span>`;
+  t.classList.add('show');
+  clearTimeout(t._hideTimer);
+  t._hideTimer = setTimeout(()=>t.classList.remove('show'), 4000);
+}
+
+/* =========================================================================
+   AUTOMATIC SCANNING — runs on a timer while this tab stays open.
+   ========================================================================= */
+async function pollGmail(){
+  const items = state.gmailConnected ? await fetchRealGmail() : demoEmailSweep();
+  items.forEach(item => {
+    const result = analyze(item.text, 'email');
+    const rec = recordScan(state.gmailConnected ? 'gmail' : 'demo', 'email', item.text, result);
+    runAiForRecord(rec, item.text, 'email', result);
+  });
+  state.connectors.gmail.lastRunAt = new Date().toISOString();
+  state.connectors.gmail.lastRunCount = items.length;
+  state.connectors.gmail.totalRuns += 1;
+  saveState();
+  refreshIfVisible();
+}
+function pollLogs(){
+  const items = fetchNewLogLines();
+  items.forEach(item => {
+    const result = analyze(item.text, 'log');
+    const rec = recordScan('log_ingest', 'log', item.text, result);
+    runAiForRecord(rec, item.text, 'log', result);
+  });
+  state.connectors.log_ingest.lastRunAt = new Date().toISOString();
+  state.connectors.log_ingest.lastRunCount = items.length;
+  state.connectors.log_ingest.totalRuns += 1;
+  saveState();
+  refreshIfVisible();
+}
+
+/* =========================================================================
+   UI
+   ========================================================================= */
+let currentType = 'email';
+
+document.querySelectorAll('nav.tabs button').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('nav.tabs button').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+    document.getElementById('view-'+btn.dataset.view).classList.add('active');
+    if(btn.dataset.view==='dashboard') renderDashboard();
+    if(btn.dataset.view==='alerts') renderAlerts();
+  });
+});
+function refreshIfVisible(){
+  if(document.getElementById('view-dashboard').classList.contains('active')) renderDashboard();
+  if(document.getElementById('view-alerts').classList.contains('active')) renderAlerts();
+  updateAlertBadge();
+}
+
+document.querySelectorAll('.type-select button').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('.type-select button').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    currentType = btn.dataset.type;
+  });
+});
+
+const samples = {
+  email: DEMO_EMAILS[1],
+  url: `http://paypal-secure-update.account-verify.tk/login.php?ref=93kd0a&redirect=bit.ly/3xQvT2`,
+  log: MALICIOUS_LOGS[0]
+};
+document.getElementById('sampleBtn').addEventListener('click', ()=>{ document.getElementById('inputText').value = samples[currentType]; });
+document.getElementById('clearBtn').addEventListener('click', ()=>{ document.getElementById('inputText').value = ''; });
+
+const severityMeta = {
+  CRITICAL:{color:'#E5484D', label:'Critical risk', blurb:'Strong, multiple indicators of active malicious intent.'},
+  HIGH:{color:'#F2994A', label:'High risk', blurb:'Several credible threat indicators were detected.'},
+  MEDIUM:{color:'#F0A63C', label:'Medium risk', blurb:'Some suspicious patterns present — review recommended.'},
+  LOW:{color:'#4CAF6D', label:'Low risk', blurb:'No significant threat indicators detected.'}
+};
+const actionsFor = {
+  CRITICAL:['Isolate the affected account, host, or mailbox immediately.','Block the sender domain / URL / source IP at the network edge.','Escalate to the security response team and open an incident ticket.','Force a credential reset for any user who may have interacted with this item.'],
+  HIGH:['Quarantine the message or flag the log source for review.','Verify the sender or connection through an independent, trusted channel.',"Add the domain/IP to the security team's watchlist.",'Notify affected users not to click links or enter credentials.'],
+  MEDIUM:['Hold the item for manual review before it reaches the inbox or is actioned.','Cross-check the domain or IP against threat intelligence feeds.','Monitor for repeat attempts from the same source.'],
+  LOW:['No immediate action required.','Continue routine monitoring as part of standard operations.']
+};
+
+function renderResult(score, severity, indicators, aiAnalysis, aiPending){
+  document.getElementById('resultEmpty').style.display = 'none';
+  const body = document.getElementById('resultBody');
+  body.style.display = 'block';
+  const meta = severityMeta[severity];
+  let aiHtml;
+  if(aiPending){
+    aiHtml = `<div class="ai-box loading"><span class="spinner"></span>Running AI analysis…</div>`;
+  } else if(aiAnalysis){
+    aiHtml = `<div class="ai-box">${escapeHtml(aiAnalysis).replace(/\n+/g,'<br>')}</div>`;
+  } else {
+    aiHtml = `<div class="ai-box muted">AI analysis unavailable for this item.</div>`;
+  }
+  let indicatorsHtml;
+  if(!indicators || indicators.length===0){
+    indicatorsHtml = `<div class="indicator clean"><div class="dot"></div><div class="body"><b>No threat indicators matched</b><span>The submitted content did not trigger any known phishing, malware, or intrusion patterns.</span></div></div>`;
+  } else {
+    indicatorsHtml = [...indicators].sort((a,b)=>b.weight-a.weight)
+      .map(i=>`<div class="indicator" style="--sev-color:${meta.color}"><div class="dot"></div><div class="body"><b>${escapeHtml(i.title)}</b><span>${escapeHtml(i.detail)}</span></div></div>`).join('');
+  }
+  const actionsHtml = actionsFor[severity].map(a=>`<li>${escapeHtml(a)}</li>`).join('');
+  body.innerHTML = `
+    <div class="verdict-row" style="--sev-color:${meta.color}">
+      <div class="score-badge" style="--sev-color:${meta.color}"><div class="num">${score}</div><div class="of">/ 100</div></div>
+      <div class="verdict-text" style="--sev-color:${meta.color}">
+        <div class="sev-label">${meta.label}</div>
+        <h3>${severity==='LOW'?'Clean':severity.charAt(0)+severity.slice(1).toLowerCase()+' severity'}</h3>
+        <p>${meta.blurb}</p>
+      </div>
+    </div>
+    <div class="section-label">AI ANALYSIS</div>
+    <div class="ai-tag">✦ AI read this in context</div>
+    ${aiHtml}
+    <div class="section-label">MATCHED INDICATORS (${indicators?indicators.length:0})</div>
+    <div>${indicatorsHtml}</div>
+    <div class="section-label">RECOMMENDED ACTIONS</div>
+    <ul class="action-list">${actionsHtml}</ul>`;
+}
+
+document.getElementById('scanBtn').addEventListener('click', ()=>{
+  const text = document.getElementById('inputText').value.trim();
+  if(!text){ const ta=document.getElementById('inputText'); ta.style.borderColor='var(--critical)'; setTimeout(()=>ta.style.borderColor='',700); return; }
+  const result = analyze(text, currentType);
+  const rec = recordScan('manual', currentType, text, result);
+  currentlyShownId = rec.id;
+  renderResult(result.score, result.severity, result.indicators, null, true);
+  updateAlertBadge();
+  runAiForRecord(rec, text, currentType, result);
+});
+
+function updateAlertBadge(){
+  const open = state.alerts.filter(a=>!a.acknowledged).length;
+  const badge = document.getElementById('alertBadge');
+  badge.textContent = open;
+  badge.style.display = open>0 ? 'inline-block' : 'none';
+}
+
+function renderDashboard(){
+  const scans = state.scans;
+  const count = sev => scans.filter(s=>s.severity===sev).length;
+  document.getElementById('statTotal').textContent = scans.length;
+  document.getElementById('statCritical').textContent = count('CRITICAL');
+  document.getElementById('statHigh').textContent = count('HIGH');
+  document.getElementById('statMedium').textContent = count('MEDIUM');
+  document.getElementById('statLow').textContent = count('LOW');
+  document.getElementById('statOpenAlerts').textContent = state.alerts.filter(a=>!a.acknowledged).length;
+
+  document.getElementById('hintBanner').style.display = (!state.gmailConnected && !state.hintDismissed) ? 'flex' : 'none';
+
+  const gmailLabel = state.gmailConnected ? `Live inbox — ${state.gmailEmail||'connected'}` : 'Gmail inbox sweep';
+  const gmailBadge = state.gmailConnected ? '<span class="real-badge">LIVE</span>' : '<span class="demo-badge">DEMO DATA</span>';
+  const gmailStatusClass = state.gmailConnected ? '' : 'off';
+  const gmailAction = state.gmailConnected
+    ? `<button class="mini-btn danger" id="dashDisconnectBtn">Disconnect</button>`
+    : `<button class="mini-btn" id="dashConnectBtn">Connect Gmail</button>`;
+
+  const connRow = document.getElementById('connectorRow');
+  connRow.innerHTML = `
+    <div class="connector-card">
+      <div>
+        <div class="cname">${gmailLabel}${gmailBadge}</div>
+        <div class="csub">every ${state.connectors.gmail.intervalSeconds}s · ${state.connectors.gmail.totalRuns} sweeps · last batch: ${state.connectors.gmail.lastRunCount} item(s)</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div class="connector-status ${gmailStatusClass}"><div class="live-dot" style="width:6px;height:6px;"></div>${state.gmailConnected?'LIVE':'DEMO'}</div>
+        ${gmailAction}
+      </div>
+    </div>
+    <div class="connector-card">
+      <div>
+        <div class="cname">Server log ingest<span class="demo-badge">SIMULATED</span></div>
+        <div class="csub">every ${state.connectors.log_ingest.intervalSeconds}s · ${state.connectors.log_ingest.totalRuns} sweeps · last batch: ${state.connectors.log_ingest.lastRunCount} item(s)</div>
+      </div>
+      <div class="connector-status"><div class="live-dot" style="width:6px;height:6px;"></div>ACTIVE</div>
+    </div>`;
+
+  const connectBtn = document.getElementById('dashConnectBtn');
+  if(connectBtn) connectBtn.addEventListener('click', openModal);
+  const disconnectBtn = document.getElementById('dashDisconnectBtn');
+  if(disconnectBtn) disconnectBtn.addEventListener('click', disconnectGmail);
+
+  const list = document.getElementById('historyList');
+  if(scans.length===0){ list.innerHTML = `<div class="empty-hist">No scans yet. Run one, or wait a few seconds for the automatic sweep.</div>`; return; }
+  list.innerHTML = scans.slice(0,150).map(h=>`
+    <div class="hist-row" data-id="${h.id}">
+      <div><span class="src-pill">${h.source}</span></div>
+      <div><span class="sev-pill ${h.severity}">${h.severity}</span></div>
+      <div class="h-excerpt"><b>[${h.item_type}]</b> ${escapeHtml(h.excerpt)}</div>
+      <div class="h-score">${h.score}/100</div>
+      <div class="h-time">${new Date(h.created_at).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}</div>
+    </div>`).join('');
+
+  document.querySelectorAll('.hist-row').forEach(row=>{
+    row.addEventListener('click', ()=>{
+      const item = state.scans.find(s=>String(s.id)===row.dataset.id);
+      if(!item) return;
+      document.querySelectorAll('nav.tabs button').forEach(b=>b.classList.remove('active'));
+      document.querySelector('nav.tabs button[data-view="scan"]').classList.add('active');
+      document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+      document.getElementById('view-scan').classList.add('active');
+      currentlyShownId = item.id;
+      renderResult(item.score, item.severity, item.indicators, item.aiAnalysis, !!item.aiPending);
+    });
+  });
+}
+
+document.getElementById('clearHistBtn').addEventListener('click', ()=>{
+  state.scans = []; state.alerts = [];
+  saveState(); renderDashboard(); renderAlerts(); updateAlertBadge();
+});
+document.getElementById('hintClose').addEventListener('click', ()=>{
+  state.hintDismissed = true; saveState();
+  document.getElementById('hintBanner').style.display = 'none';
+});
+
+function renderAlerts(){
+  const open = state.alerts.filter(a=>!a.acknowledged);
+  const list = document.getElementById('alertsList');
+  if(open.length===0){ list.innerHTML = `<div class="empty-hist">No open alerts. All clear.</div>`; return; }
+  list.innerHTML = open.map(a=>`
+    <div class="alert-row">
+      <span class="sev-pill ${a.severity}">${a.severity}</span>
+      <div class="body"><b>${escapeHtml(a.title)}</b><p>${escapeHtml(a.summary)}</p></div>
+      <button class="ack-btn" data-id="${a.id}">Acknowledge</button>
+    </div>`).join('');
+  document.querySelectorAll('.ack-btn').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const alert = state.alerts.find(a=>String(a.id)===btn.dataset.id);
+      if(alert) alert.acknowledged = true;
+      saveState(); renderAlerts(); renderDashboard(); updateAlertBadge();
+    });
+  });
+}
+
+/* =========================================================================
+   SETTINGS MODAL
+   ========================================================================= */
+function openModal(){
+  document.getElementById('clientIdInput').value = state.gmailClientId || '';
+  renderModal();
+  document.getElementById('modalOverlay').classList.add('show');
+}
+function closeModal(){ document.getElementById('modalOverlay').classList.remove('show'); }
+function renderModal(){
+  document.getElementById('connWho').textContent = state.gmailConnected ? `Connected as ${state.gmailEmail||'—'}` : 'Not connected';
+  document.getElementById('connBadge').textContent = state.gmailConnected ? 'LIVE' : 'DEMO DATA';
+  document.getElementById('connBadge').className = state.gmailConnected ? 'real-badge' : 'demo-badge';
+  const hasClientId = !!(state.gmailClientId && state.gmailClientId.trim());
+  const connectBtn = document.getElementById('connectGmailBtn');
+  connectBtn.disabled = !hasClientId;
+  connectBtn.textContent = state.gmailConnected ? 'Reconnect Gmail' : 'Connect Gmail';
+}
+document.getElementById('settingsBtn').addEventListener('click', openModal);
+document.getElementById('modalCloseBtn').addEventListener('click', closeModal);
+document.getElementById('modalOverlay').addEventListener('click', (e)=>{ if(e.target.id==='modalOverlay') closeModal(); });
+document.getElementById('saveClientIdBtn').addEventListener('click', ()=>{
+  state.gmailClientId = document.getElementById('clientIdInput').value.trim();
+  gmailTokenClient = null; // rebuild with new client id next connect
+  saveState();
+  renderModal();
+  toastMessage('Client ID saved', 'You can now connect Gmail.');
+});
+document.getElementById('connectGmailBtn').addEventListener('click', connectGmail);
+
+/* =========================================================================
+   BOOT
+   ========================================================================= */
+(async function init(){
+  await loadTheme();
+  await loadState();
+  updateAlertBadge();
+  renderDashboard();
+  renderAlerts();
+  // Automatic sweeps — first run shortly after load, then on interval.
+  setTimeout(pollGmail, 4000);
+  setTimeout(pollLogs, 9000);
+  setInterval(pollGmail, 30000);
+  setInterval(pollLogs, 45000);
+})();
+</script>
+</body>
+</html>
