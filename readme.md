@@ -16,7 +16,7 @@ Threat Guard AI is a browser-based cybersecurity dashboard that lets users scan 
 
 ## Setup Instructions
 1. Clone or download this repository
-2. Open `guard_2.html` in any modern browser
+2. Open `Thread Guard AI.html` in any modern browser
 3. No installation required
 
 ## Team Members
